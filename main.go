@@ -36,8 +36,7 @@ func DecodeReport(payload []byte, privateKey []byte) (*DecodedReport, error) {
 	}
 
 	decoded := decodeDecryptedReportData(decrypted)
-	decoded.Timestamp = time.Unix(int64(binary.BigEndian.Uint32(payload[0:4])) + 978307200,0) // Apple epoch
-	fmt.Printf("timestamp: %s\n", decoded.Timestamp.String())
+	decoded.Timestamp = time.Unix(int64(binary.BigEndian.Uint32(payload[0:4]))+978307200, 0) // Apple epoch
 
 	return &decoded, nil
 }
