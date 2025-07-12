@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"math/big"
@@ -47,17 +48,21 @@ func DecodeReport(payload []byte, privateKey []byte) (*DecodedReport, error) {
 // On success it returns the decrypted data.
 // Will return nil and an error if the private key does not match the data.
 func decryptPayload(data []byte, privateKeyBytes []byte) ([]byte, error) {
-	priv := createPrivateKey(privateKeyBytes)
-
 	ephX, ephY, err := extractEphemeralKey(data)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshaling ephemeral public key: %w", err)
 	}
+	fmt.Printf("ephX %d ephY %d\n", ephX, ephY)
+
+	priv := createPrivateKey(privateKeyBytes)
+	fmt.Printf("privD %d\n", priv.D)
 
 	sharedKey := deriveSharedKey(priv, ephX, ephY)
+	fmt.Printf("sharedKey %s\n", base64.StdEncoding.EncodeToString(sharedKey))
 	symmetricKey := calculateSymmetricKey(sharedKey, data[5:62])
 
 	decryptionKey, iv, encData, tag := prepareDecryptionInputs(symmetricKey, data)
+	fmt.Printf("iv %s encData %s tag %s\n", base64.StdEncoding.EncodeToString(iv), base64.StdEncoding.EncodeToString(encData), base64.StdEncoding.EncodeToString(tag))
 
 	decrypted, err := decrypt(encData, decryptionKey, iv, tag)
 	if err != nil {
@@ -91,7 +96,9 @@ func extractEphemeralKey(data []byte) (*big.Int, *big.Int, error) {
 func deriveSharedKey(priv *ecdsa.PrivateKey, ephX, ephY *big.Int) []byte {
 	curve := elliptic.P224()
 	sharedKeyX, _ := curve.ScalarMult(ephX, ephY, priv.D.Bytes())
-	return sharedKeyX.Bytes()
+	keyBytes := make([]byte, (curve.Params().BitSize+7)/8)
+	sharedKeyX.FillBytes(keyBytes)
+	return keyBytes
 }
 
 // calculateSymmetricKey calculates the symmetric key using SHA256.
