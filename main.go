@@ -6,7 +6,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"math/big"
@@ -52,18 +51,13 @@ func decryptPayload(data []byte, privateKeyBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshaling ephemeral public key: %w", err)
 	}
-	fmt.Printf("ephX %d ephY %d\n", ephX, ephY)
 
 	priv := createPrivateKey(privateKeyBytes)
-	fmt.Printf("privD %d\n", priv.D)
 
 	sharedKey := deriveSharedKey(priv, ephX, ephY)
-	fmt.Printf("sharedKey %s\n", base64.StdEncoding.EncodeToString(sharedKey))
 	symmetricKey := calculateSymmetricKey(sharedKey, data[5:62])
 
 	decryptionKey, iv, encData, tag := prepareDecryptionInputs(symmetricKey, data)
-	fmt.Printf("iv %s encData %s tag %s\n", base64.StdEncoding.EncodeToString(iv), base64.StdEncoding.EncodeToString(encData), base64.StdEncoding.EncodeToString(tag))
-
 	decrypted, err := decrypt(encData, decryptionKey, iv, tag)
 	if err != nil {
 		return nil, fmt.Errorf("error decrypting data: %w", err)
